@@ -16,4 +16,4 @@ else
   echo "Warning: CA bundle not found at $CERT_PATH — SSL verification may fail"
 fi
 
-.venv/bin/python3 main.py
+.venv/bin/python3 run.py
