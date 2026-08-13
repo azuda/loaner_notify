@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 import os
 import datetime
 import requests
+import certifi
+import tempfile
 import json
 from pathlib import Path
 
@@ -23,6 +25,26 @@ HEADERS = {
   "Accept": "application/json",
   "Notion-Version": "2025-09-03",
 }
+
+
+def get_ca_bundle():
+  # merge the default trust store with the cloudflare gateway root cert
+  # (if present) rather than replacing it, so this works both on machines
+  # behind a TLS-inspecting gateway and machines with a direct connection
+  cert_path = Path(__file__).parent / "cert.pem"
+  if not cert_path.exists():
+    print(f"Warning: CA bundle not found at {cert_path} — using default trust store")
+    return certifi.where()
+
+  combined_path = Path(tempfile.gettempdir()) / "loaner_notify_ca_bundle.pem"
+  default_bundle = Path(certifi.where()).read_bytes()
+  gateway_cert = cert_path.read_bytes()
+  combined_path.write_bytes(default_bundle + b"\n" + gateway_cert)
+  print(f"Using merged CA bundle ({cert_path.name} + certifi) for SSL verification")
+  return str(combined_path)
+
+
+CA_BUNDLE = get_ca_bundle()
 
 
 
@@ -56,23 +78,13 @@ def update_page(page_id):
       }
     }
   }
-  response = requests.patch(entry_url, json=payload, headers=headers)
+  response = requests.patch(entry_url, json=payload, headers=headers, verify=CA_BUNDLE)
   print(response.json())
   return response.json()
 
 
 
 def main():
-  # cert_path = Path("./cert.pem")
-  # if cert_path.exists():
-  #   os.environ["REQUESTS_CA_BUNDLE"] = str(cert_path)
-  #   os.environ["CF_CA_BUNDLE"] = str(cert_path)
-  #   os.environ["SSL_CERT_FILE"] = str(cert_path)
-  #   os.environ["CURL_CA_BUNDLE"] = str(cert_path)
-  #   print(f"Using CA bundle at {cert_path} for SSL verification")
-  # else:
-  #   print("Warning: CA bundle not found at cert.pem — SSL verification may fail")
-
   global DB_ID, HEADERS
 
   db_url = f"https://api.notion.com/v1/data_sources/{DB_ID}/query"
@@ -85,7 +97,7 @@ def main():
       }
     }
   }
-  response = requests.post(db_url, json=payload, headers=headers)
+  response = requests.post(db_url, json=payload, headers=headers, verify=CA_BUNDLE)
 
   # update pages from db query
   results = []
