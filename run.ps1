@@ -1,4 +1,4 @@
-# run.ps1 — Windows wrapper for loaner_notify
+# run.ps1 - Windows wrapper for loaner_notify
 # Creates the venv on first run, sets the CA bundle if cert.pem exists, then runs run.py.
 
 $ErrorActionPreference = "Stop"
@@ -15,7 +15,7 @@ try {
       python -m venv .venv
     }
     if (-not (Test-Path $venvPython)) {
-      throw "Failed to create .venv — is Python 3 installed and on PATH?"
+      throw "Failed to create .venv - is Python 3 installed and on PATH?"
     }
     & $venvPython -m pip install --quiet -r requirements.txt
   }
@@ -30,7 +30,7 @@ try {
     Write-Host "Using CA bundle at $certPath for SSL verification"
   }
   else {
-    Write-Host "Warning: CA bundle not found at $certPath — SSL verification may fail"
+    Write-Host "Warning: CA bundle not found at $certPath - SSL verification may fail"
   }
 
   & $venvPython run.py
